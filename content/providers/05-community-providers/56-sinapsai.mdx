@@ -1,29 +1,34 @@
 ---
 title: SinapsAI
-description: In-process multi-provider AI Gateway with Circuit Breaker, failover, and zero runtime dependencies for the AI SDK
-url: "https://ai-sdk.dev/providers/community-providers/sinapsai"
+description: SinapsAI provider for the AI SDK
 ---
 
-[SinapsAI](https://github.com/roedyrustam/sinapsai) is a high-performance in-process AI Gateway and Control Plane for Node.js and TypeScript. It allows the Vercel AI SDK to automatically route between multiple LLM providers (OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Groq, Mistral, Ollama, OpenRouter) with zero extra network hops (<10ms overhead), in-memory Circuit Breakers, automatic failover, and PII guardrails.
+# SinapsAI
 
-Key features:
-- **In-Process Resilience**: Zero proxy containers or external Redis required.
-- **Circuit Breaker**: Instantly trips during provider outages to protect serverless and edge runtimes.
-- **Lowest-Latency Auto-Routing**: Dynamically dispatches requests to the fastest responsive LLM.
-- **Enterprise PII Guardrails**: In-process automatic redaction for email, phone, credit card (Luhn validation), SSN, and JWT.
-- **Ecosystem Compatibility**: Works with `streamText`, `generateText`, and Next.js 15 App Router Route Handlers.
+[SinapsAI](https://github.com/roedyrustam/sinapsai) is a high-performance in-process AI Gateway and Control Plane for Node.js and TypeScript. It implements the Vercel AI SDK Language Model Specification (`LanguageModelV1` and `EmbeddingModelV1`), allowing you to route between multiple LLM providers (OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Groq, Mistral, Ollama, OpenRouter) with zero extra network hops (<10ms overhead), in-memory Circuit Breakers, automatic failover, and PII guardrails.
+
+The SinapsAI provider is a good fit if you want:
+
+- **In-process resilience**: Zero proxy containers, separate microservices, or external Redis required.
+- **In-memory Circuit Breaker**: Instantly trips during provider outages to protect serverless and edge runtimes.
+- **Lowest-latency auto-routing**: Dynamically dispatches requests to the fastest responsive LLM based on moving-average latency.
+- **Multi-provider automatic failover**: Automatically fails over to backup providers (e.g., Anthropic Claude or Google Gemini) when primary providers hit rate limits or downtime.
+- **Enterprise PII guardrails**: In-process automatic redaction for email, phone numbers, credit cards (Luhn-validated), SSN, and JWT tokens.
+- **Universal frontier reasoning**: Integrated support for reasoning parameters like `thinkingBudget` and `reasoningEffort`.
+
+Learn more in the [SinapsAI documentation](https://github.com/roedyrustam/sinapsai).
 
 ## Setup
 
-The SinapsAI adapter is built directly into the `sinapsai` package. Install it with:
+The SinapsAI provider is available in the `sinapsai` package. Install it with:
 
-```package-install
-npm install sinapsai
+<InstallPackages packages="sinapsai" />
 
-```
 ## Provider Instance
-To create a SinapsAI provider instance with multi-provider failover, use createSinapsAI:
-```
+
+To create a SinapsAI provider instance with multi-provider failover and automatic routing, use the `createSinapsAI` function:
+
+```typescript
 import { createSinapsAI } from 'sinapsai/ai-sdk';
 import { GroqProvider, OpenAiProvider, AnthropicProvider } from 'sinapsai';
 
@@ -36,9 +41,41 @@ export const sinaps = createSinapsAI({
   ],
 });
 ```
-## Usage in Next.js 15 Route Handlers
-Use SinapsAI directly with streamText in Next.js App Router:
+
+## Language Models
+
+Create a language model with your SinapsAI provider instance and use it with `generateText` or `streamText`. You can optionally specify model-level fallbacks and reasoning settings:
+
+```typescript
+const model = sinaps('llama-3.3-70b-versatile', {
+  thinkingBudget: 1024,
+  fallbackModels: ['gpt-4o-mini', 'claude-3-7-sonnet-20250219'],
+});
 ```
+
+## Examples
+
+### `generateText`
+
+```typescript
+import { generateText } from 'ai';
+import { sinaps } from '@/lib/sinaps';
+
+const { text } = await generateText({
+  model: sinaps('gpt-4o', {
+    fallbackModels: ['claude-3-7-sonnet-20250219'],
+  }),
+  prompt: 'Explain quantum computing in one sentence.',
+});
+
+console.log(text);
+```
+
+### `streamText` in Next.js Route Handlers
+
+Use SinapsAI directly with `streamText` in Next.js App Router Route Handlers:
+
+```typescript
 // app/api/chat/route.ts
 import { streamText } from 'ai';
 import { sinaps } from '@/lib/sinaps';
@@ -57,9 +94,12 @@ export async function POST(req: Request) {
   return result.toDataStreamResponse();
 }
 ```
-## Embedding Models
-SinapsAI also provides unified embedding models with automatic failover:
-```
+
+### Embedding Models
+
+SinapsAI provides unified text embedding models with automatic failover across providers:
+
+```typescript
 import { embed } from 'ai';
 import { sinaps } from '@/lib/sinaps';
 
@@ -68,5 +108,11 @@ const { embedding } = await embed({
   value: 'Semantic search query',
 });
 
+console.log(embedding);
 ```
 
+## Additional Resources
+
+- [SinapsAI GitHub Repository](https://github.com/roedyrustam/sinapsai)
+- [SinapsAI on npm](https://www.npmjs.com/package/sinapsai)
+- [SinapsAI Documentation & Examples](https://github.com/roedyrustam/sinapsai/tree/main/examples)
